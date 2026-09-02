@@ -41,36 +41,25 @@ body {
     flex-direction: column;
 }
 
-/* Header Container & Sticky Layout */
+/* Simple Top Header (Logo Only) */
 header {
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 900;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    padding: 12px 16px;
 }
 
 .header-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 10px 16px 6px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-@media (min-width: 768px) {
-    .header-container {
-        height: 70px;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 20px;
-        gap: 0;
-    }
+    justify-content: space-between;
+    align-items: center;
 }
 
 .logo {
@@ -93,74 +82,80 @@ header {
     font-weight: 700;
 }
 
-/* Scrollable Clean Nav Bar */
-nav {
+/* Fixed Bottom Navigation Bar */
+nav.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
     display: flex;
+    justify-content: space-around;
     align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 4px 2px 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
 }
 
-nav::-webkit-scrollbar {
-    display: none;
-}
-
-/* Modern Pill Navigation Tabs */
 .nav-tab {
-    border: 1px solid transparent;
-    background: #f1efea;
-    padding: 8px 16px;
-    border-radius: 30px;
-    font-size: 13px;
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: inline-flex;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex-shrink: 0;
+    gap: 3px;
+    flex: 1;
+    position: relative;
+}
+
+.nav-tab .icon {
+    font-size: 18px;
+    line-height: 1;
 }
 
 .nav-tab:hover {
-    color: var(--primary-dark);
-    background: var(--primary-light);
+    color: var(--primary);
 }
 
 .nav-tab.active {
-    background: var(--primary);
-    color: #ffffff;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(61, 106, 83, 0.25);
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.nav-tab.active .icon {
+    transform: translateY(-2px);
+    transition: transform 0.2s;
 }
 
 .nav-tab .badge-count {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    margin-right: -18px;
     background: var(--accent);
     color: white;
     font-size: 10px;
-    padding: 1px 6px;
+    padding: 1px 5px;
     border-radius: 10px;
-    margin-left: 2px;
+    font-weight: bold;
 }
 
-.nav-tab.active .badge-count {
-    background: white;
-    color: var(--accent);
-}
-
-/* Page Views Container */
+/* Page Views Container & Padding for Bottom Bar */
 main {
     flex: 1;
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
-    padding: 15px 15px 40px;
+    padding: 15px 15px 90px;
 }
 
 .page-view {
@@ -770,7 +765,7 @@ footer {
     text-align: center;
     padding: 20px 15px;
     font-size: 13px;
-    margin-top: auto;
+    margin-bottom: 60px;
 }
 
 /* Bookmark Button Extra UI */
@@ -845,15 +840,6 @@ footer {
             🏢 PSRU Dorm Finder
             <span class="logo-badge">พิษณุโลก</span>
         </div>
-        <nav>
-            <button class="nav-tab active" id="tab-home" onclick="switchPage('home')">🏠 หน้าแรก</button>
-            <button class="nav-tab" id="tab-search" onclick="switchPage('search')">🔎 ค้นหาหอพัก</button>
-            <button class="nav-tab" id="tab-utilities" onclick="switchPage('utilities')">💧⚡ ค่าน้ำ-ไฟ</button>
-            <button class="nav-tab" id="tab-contact" onclick="switchPage('contact')">📞 ติดต่อ/ฝากหอ</button>
-            <button class="nav-tab" id="tab-bookmarks" onclick="switchPage('bookmarks')">
-                ❤️ ถูกใจ <span class="badge-count" id="bookmarkCount">0</span>
-            </button>
-        </nav>
     </div>
 </header>
 
@@ -1040,6 +1026,31 @@ footer {
 
 </main>
 
+<!-- Bottom Navigation Bar -->
+<nav class="bottom-nav">
+    <button class="nav-tab active" id="tab-home" onclick="switchPage('home')">
+        <span class="icon">🏠</span>
+        <span>หน้าแรก</span>
+    </button>
+    <button class="nav-tab" id="tab-search" onclick="switchPage('search')">
+        <span class="icon">🔎</span>
+        <span>ค้นหา</span>
+    </button>
+    <button class="nav-tab" id="tab-utilities" onclick="switchPage('utilities')">
+        <span class="icon">💧⚡</span>
+        <span>ค่าน้ำ-ไฟ</span>
+    </button>
+    <button class="nav-tab" id="tab-contact" onclick="switchPage('contact')">
+        <span class="icon">📞</span>
+        <span>ติดต่อ</span>
+    </button>
+    <button class="nav-tab" id="tab-bookmarks" onclick="switchPage('bookmarks')">
+        <span class="icon">❤️</span>
+        <span>ถูกใจ</span>
+        <span class="badge-count" id="bookmarkCount">0</span>
+    </button>
+</nav>
+
 <div class="modal" id="dormModal">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal()">✕</button>
@@ -1048,8 +1059,6 @@ footer {
 </div>
 
 <footer>
-    <p>🏢 <strong>PSRU Dorm Finder</strong> - ค้นหาหอพัก มรภ.พิบูลสงคราม</p>
-    <p style="margin-top: 4px; opacity: 0.7; font-size: 12px;">ออกแบบเพื่อการใช้งานบนมือถืออย่างสะดวกรวดเร็ว</p>
 </footer>
 
 <script>
