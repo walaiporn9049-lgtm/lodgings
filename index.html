@@ -2,7 +2,6 @@
 <html lang="th" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhitRoom - แพลตฟอร์มหาที่พักและจัดการหอพักพิษณุโลก</title>
     
     <!-- Tailwind CSS -->
@@ -47,8 +46,10 @@
             -webkit-backdrop-filter: blur(12px);
         }
     </style>
+
+
 </head>
-<body class="h-full flex flex-col text-slate-800 pb-24 md:pb-0">
+<body class="h-full flex flex-col text-slate-800">
 
     <!-- Navigation Bar -->
     <header class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 shadow-sm">
@@ -76,6 +77,9 @@
                     <button id="role-btn-landlord" onclick="switchRole('landlord')" class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
                         <i class="fa-solid fa-house-user"></i> Portal เจ้าของหอ
                     </button>
+                    <button id="role-btn-admin" onclick="switchRole('admin')" class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i> ผู้ดูแลระบบ
+                    </button>
                 </div>
 
                 <!-- Desktop Dynamic Navigation Menu -->
@@ -87,9 +91,9 @@
                         <i class="fa-solid fa-heart"></i> ถูกใจ
                         <span id="fav-count-badge" class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden">0</span>
                     </button>
-                    <button id="nav-tenant-notif" onclick="switchTab('tenant-notif')" class="relative px-3.5 py-2 rounded-xl font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition flex items-center gap-2 text-sm">
-                        <i class="fa-solid fa-paper-plane"></i> คำขอจองของคุณ
-                        <span id="tenant-notif-badge" class="w-2 h-2 bg-indigo-500 rounded-full hidden"></span>
+                    <button id="nav-tenant-notif" onclick="openTenantRequestsAndMarkRead()" class="relative px-3.5 py-2 rounded-xl font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-paper-plane"></i> คำขอของคุณ
+                        <span id="tenant-notif-badge" class="bg-indigo-500 text-white text-[10px] min-w-[18px] h-[18px] px-1.5 rounded-full hidden items-center justify-center font-bold">0</span>
                     </button>
                 </nav>
 
@@ -103,6 +107,12 @@
                     </button>
                     <button onclick="handleAddListingClick()" class="bg-gradient-to-r from-sky-600 to-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-95 shadow-md shadow-sky-100 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-plus"></i> เพิ่มหอพัก
+                    </button>
+                </nav>
+
+                <nav id="desktop-nav-admin" class="hidden items-center space-x-1">
+                    <button id="nav-admin-dashboard" onclick="switchAdminTab('dashboard')" class="px-3.5 py-2 rounded-xl font-medium text-rose-600 bg-rose-50 transition flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-shield-halved"></i> ระบบธุรกิจ • Dashboard
                     </button>
                 </nav>
             </div>
@@ -135,6 +145,15 @@
                         <i class="fa-solid fa-right-to-bracket mr-1"></i> เข้าสู่ระบบผู้เช่า
                     </button>
                     <p class="text-[11px] text-slate-400 text-center">สำหรับทดสอบ: ใช้อีเมลที่ต้องการ | รหัสผ่าน: <span class="font-mono text-sky-600 font-bold">12345</span></p>
+                    <div class="flex items-center justify-center gap-4 pt-1 text-[11px]">
+                        <button type="button" onclick="openAuthModal('register','tenant')" class="text-sky-600 hover:text-sky-700 font-semibold hover:underline">
+                            สมัครสมาชิกผู้เช่า
+                        </button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="openAuthModal('forgot','tenant')" class="text-slate-500 hover:text-sky-600 font-semibold hover:underline">
+                            ลืมรหัสผ่าน?
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -263,15 +282,107 @@
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                         <div>
-                            <h2 class="text-xl font-bold text-slate-800">ประวัติคำขอนัดหมาย & จองห้องพักของคุณ</h2>
+                            <h2 class="text-xl font-bold text-slate-800">ประวัติคำขอของคุณ</h2>
                             <p class="text-xs text-slate-500">ติดตามสถานะการตอบรับจากเจ้าของหอพัก</p>
                         </div>
                         <span id="tenant-req-count" class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full">0 รายการ</span>
                     </div>
-                    <div id="tenant-requests-list" class="space-y-3"></div>
+                    <div class="space-y-5">
+                        <div class="bg-sky-50/60 border border-sky-100 rounded-2xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    <span class="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-calendar-check"></i>
+                                    </span>
+                                    ขอนัดหมาย
+                                </h3>
+                                <span id="tenant-appointment-count" class="bg-sky-100 text-sky-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">0 รายการ</span>
+                            </div>
+                            <div id="tenant-appointment-list" class="space-y-3"></div>
+                        </div>
+
+                        <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    <span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-bed"></i>
+                                    </span>
+                                    จองห้องพัก
+                                </h3>
+                                <span id="tenant-reservation-count" class="bg-indigo-100 text-indigo-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">0 รายการ</span>
+                            </div>
+                            <div id="tenant-reservation-list" class="space-y-3"></div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
+        </div>
+
+        <!-- ADMIN SECTION VIEWS -->
+        <div id="admin-view-container" class="space-y-6 hidden">
+            <div id="admin-auth-card" class="bg-white max-w-md mx-auto p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-4 my-8">
+                <div class="w-16 h-16 bg-gradient-to-tr from-rose-500 to-orange-500 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-rose-100">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">ระบบผู้ดูแลระบบ (Admin Portal)</h3>
+                    <p class="text-xs text-slate-500 mt-1">เข้าสู่ระบบแยกจากผู้เช่าและเจ้าของหอพัก</p>
+                </div>
+                <form onsubmit="handleAdminLogin(event)" class="space-y-3 pt-2 text-left">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมลแอดมิน</label>
+                        <input type="email" id="admin-email" required placeholder="admin@phitroom.com" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน</label>
+                        <input type="password" id="admin-password" required placeholder="รหัสผ่าน (12345)" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md transition">
+                        <i class="fa-solid fa-right-to-bracket mr-1"></i> เข้าสู่ระบบแอดมิน
+                    </button>
+                    <p class="text-[11px] text-slate-400 text-center">Demo: <span class="font-mono text-rose-600 font-bold">admin@phitroom.com</span> | รหัสผ่าน <span class="font-mono text-rose-600 font-bold">12345</span></p>
+                </form>
+            </div>
+
+            <div id="admin-dashboard-panel" class="space-y-6 hidden">
+                <div class="bg-slate-900 rounded-3xl p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="bg-rose-500/20 text-rose-300 text-[11px] px-2.5 py-0.5 rounded-full font-medium border border-rose-400/30">Admin Control Center</span>
+                            <span class="text-slate-400 text-xs">จัดการระบบ PhitRoom</span>
+                        </div>
+                        <h2 class="text-2xl font-bold">ระบบธุรกิจ • Dashboard</h2>
+                        <p class="text-slate-400 text-xs">จัดการผู้ใช้งาน ประกาศ คำขอ และรายรับรวมของระบบ</p>
+                    </div>
+                    <button onclick="adminLogout()" class="bg-slate-800 hover:bg-rose-600 border border-slate-700 text-slate-300 hover:text-white px-3 py-2.5 rounded-xl transition text-xs">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i> ออกจากระบบ
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-xs text-slate-500">ผู้ใช้งานทั้งหมด</p><p id="admin-stat-users" class="text-2xl font-extrabold text-slate-800 mt-1">0</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-xs text-slate-500">ประกาศทั้งหมด</p><p id="admin-stat-listings" class="text-2xl font-extrabold text-slate-800 mt-1">0</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-xs text-slate-500">คำขอทั้งหมด</p><p id="admin-stat-requests" class="text-2xl font-extrabold text-slate-800 mt-1">0</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><p class="text-xs text-slate-500">รายรับมัดจำที่ชำระแล้ว</p><p id="admin-stat-revenue" class="text-2xl font-extrabold text-emerald-600 mt-1">฿0</p></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 flex justify-between items-center"><div><h3 class="font-bold text-slate-800">จัดการผู้ใช้งาน</h3><p class="text-[11px] text-slate-400">ผู้เช่าและเจ้าของหอพักแยกจากแอดมิน</p></div><span id="admin-user-count" class="text-xs font-bold text-rose-600">0 คน</span></div>
+                        <div id="admin-user-list" class="p-4 space-y-2 max-h-80 overflow-auto"></div>
+                    </section>
+                    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-slate-800">รายงานสถิติแบบละเอียด</h3><p class="text-[11px] text-slate-400">สรุปสถานะคำขอและประกาศในระบบ</p></div>
+                        <div id="admin-report-panel" class="p-5 grid grid-cols-2 gap-3"></div>
+                    </section>
+                </div>
+
+                <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center"><div><h3 class="font-bold text-slate-800">อนุมัติ / ระงับประกาศ</h3><p class="text-[11px] text-slate-400">แอดมินสามารถควบคุมสถานะการเผยแพร่ประกาศได้</p></div><span id="admin-listing-count" class="text-xs font-bold text-sky-600">0 รายการ</span></div>
+                    <div id="admin-listing-list" class="p-4 space-y-2"></div>
+                </section>
+            </div>
         </div>
 
         <!-- LANDLORD SECTION VIEWS -->
@@ -299,6 +410,15 @@
                         <i class="fa-solid fa-right-to-bracket mr-1"></i> เข้าสู่ระบบแดชบอร์ด
                     </button>
                     <p class="text-[11px] text-slate-400 text-center">ทดสอบ: อีเมลใดก็ได้ | รหัสผ่าน: <span class="font-mono text-sky-600 font-bold">12345</span></p>
+                    <div class="flex items-center justify-center gap-4 pt-1 text-[11px]">
+                        <button type="button" onclick="openAuthModal('register','landlord')" class="text-sky-600 hover:text-sky-700 font-semibold hover:underline">
+                            สมัครสมาชิกเจ้าของหอพัก
+                        </button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="openAuthModal('forgot','landlord')" class="text-slate-500 hover:text-sky-600 font-semibold hover:underline">
+                            ลืมรหัสผ่าน?
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -406,59 +526,39 @@
                 <div id="landlord-tab-requests" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                         <div>
-                            <h2 class="text-xl font-bold text-slate-800">คำขอนัดหมายเข้าชม & จองห้องพักที่เข้ามา</h2>
+                            <h2 class="text-xl font-bold text-slate-800">คำขอนัดดู/จองที่เข้ามา</h2>
                             <p class="text-xs text-slate-500">ตรวจสอบรายละเอียดของผู้เช่า ตรวจสอบสลิป และตอบรับคำขอ</p>
                         </div>
                         <span id="landlord-req-count" class="bg-sky-100 text-sky-700 text-xs font-semibold px-3 py-1 rounded-full">0 รายการ</span>
                     </div>
-                    <div id="landlord-requests-list" class="space-y-3"></div>
+                    <div class="space-y-5">
+                        <section class="rounded-2xl border border-sky-100 bg-sky-50/40 p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div>
+                                    <h3 class="font-bold text-slate-800">ขอนัดหมาย</h3>
+                                    <p class="text-[11px] text-slate-500">เฉพาะคำขอนัดหมายเข้าชมที่เข้ามา</p>
+                                </div>
+                                <span id="landlord-appointment-count" class="bg-sky-100 text-sky-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">0 รายการ</span>
+                            </div>
+                            <div id="landlord-appointment-list" class="space-y-3"></div>
+                        </section>
+                        <section class="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div>
+                                    <h3 class="font-bold text-slate-800">จองห้องพัก</h3>
+                                    <p class="text-[11px] text-slate-500">เฉพาะคำขอจองห้องพักที่เข้ามา</p>
+                                </div>
+                                <span id="landlord-reservation-count" class="bg-emerald-100 text-emerald-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">0 รายการ</span>
+                            </div>
+                            <div id="landlord-reservation-list" class="space-y-3"></div>
+                        </section>
+                    </div>
                 </div>
 
             </div>
         </div>
 
     </main>
-
-    <!-- Mobile Bottom Navigation Bar -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-3 py-2 flex justify-around items-center shadow-lg">
-        <div id="mob-nav-tenant-group" class="flex justify-around items-center w-full">
-            <button onclick="switchTab('search')" id="mob-nav-search" class="flex flex-col items-center text-sky-600 font-medium text-[11px]">
-                <i class="fa-solid fa-compass text-lg mb-0.5"></i>
-                <span>ค้นหา</span>
-            </button>
-            <button onclick="switchTab('favorites')" id="mob-nav-favorites" class="flex flex-col items-center text-slate-500 font-medium text-[11px] relative">
-                <i class="fa-solid fa-heart text-lg mb-0.5"></i>
-                <span>ถูกใจ</span>
-                <span id="mob-fav-badge" class="absolute -top-1 right-2 w-2 h-2 bg-rose-500 rounded-full hidden"></span>
-            </button>
-            <button onclick="switchTab('tenant-notif')" id="mob-nav-tenant-notif" class="flex flex-col items-center text-slate-500 font-medium text-[11px] relative">
-                <i class="fa-solid fa-paper-plane text-lg mb-0.5"></i>
-                <span>คำขอจอง</span>
-            </button>
-            <button onclick="switchRole('landlord')" class="flex flex-col items-center text-slate-400 font-medium text-[11px]">
-                <i class="fa-solid fa-house-user text-lg mb-0.5"></i>
-                <span>เจ้าของหอ</span>
-            </button>
-        </div>
-
-        <div id="mob-nav-landlord-group" class="hidden justify-around items-center w-full">
-            <button onclick="switchLandlordTab('dashboard')" id="mob-nav-dash" class="flex flex-col items-center text-sky-600 font-medium text-[11px]">
-                <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
-                <span>แดชบอร์ด</span>
-            </button>
-            <button onclick="handleAddListingClick()" class="flex flex-col items-center justify-center bg-gradient-to-tr from-sky-600 to-indigo-600 text-white rounded-full w-11 h-11 -mt-4 shadow-lg border-2 border-white">
-                <i class="fa-solid fa-plus text-lg"></i>
-            </button>
-            <button onclick="switchLandlordTab('requests')" id="mob-nav-reqs" class="flex flex-col items-center text-slate-500 font-medium text-[11px] relative">
-                <i class="fa-solid fa-inbox text-lg mb-0.5"></i>
-                <span>คำขอจอง</span>
-            </button>
-            <button onclick="switchRole('tenant')" class="flex flex-col items-center text-slate-400 font-medium text-[11px]">
-                <i class="fa-solid fa-user text-lg mb-0.5"></i>
-                <span>โหมดผู้เช่า</span>
-            </button>
-        </div>
-    </nav>
 
     <!-- MODAL 1: ROOM DETAIL MODAL -->
     <div id="roomDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-6 hidden">
@@ -467,6 +567,35 @@
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
             <div id="detail-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: WRITE REVIEW -->
+    <div id="reviewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[62] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl relative p-6">
+            <button onclick="closeModal('reviewModal')" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="mb-5 pr-8">
+                <p class="text-[11px] text-amber-500 font-semibold">รีวิวหอพัก</p>
+                <h3 id="review-room-name" class="text-xl font-bold text-slate-800 mt-1"></h3>
+            </div>
+            <form onsubmit="handleReviewSubmit(event)" class="space-y-4">
+                <input type="hidden" id="review-rating" value="5">
+                <div class="text-center">
+                    <p class="text-xs font-semibold text-slate-700 mb-2">ให้คะแนนหอพัก</p>
+                    <div id="review-star-picker" class="flex justify-center gap-1"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">เขียนรีวิว *</label>
+                    <textarea id="review-text" required rows="5" maxlength="500"
+                        placeholder="บอกประสบการณ์ของคุณเกี่ยวกับหอพักนี้..."
+                        class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none resize-none"></textarea>
+                </div>
+                <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-xs font-bold shadow-md transition">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> ส่งรีวิว
+                </button>
+            </form>
         </div>
     </div>
 
@@ -502,14 +631,27 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">โซนสถานที่ *</label>
-                        <select id="form-zone" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        <select id="form-zone" required onchange="toggleCustomZoneInput()" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
                             <option value="มรภ.พิบูลสงคราม (ส่วนทะเลแก้ว)">มรภ.พิบูลสงคราม (ส่วนทะเลแก้ว)</option>
                             <option value="มรภ.พิบูลสงคราม (ส่วนวังส้มซ่า)">มรภ.พิบูลสงคราม (ส่วนวังส้มซ่า)</option>
                             <option value="ม.นเรศวร (ประตู 1-2)">ม.นเรศวร (ประตู 1-2)</option>
                             <option value="ม.นเรศวร (ประตู 4-5/คลองชล)">ม.นเรศวร (ประตู 4-5/คลองชล)</option>
                             <option value="ตัวเมืองพิษณุโลก / หน้าสถานีรถไฟ">ตัวเมืองพิษณุโลก / หน้าสถานีรถไฟ</option>
                             <option value="โซนบิ๊กซี / โลตัส / โฮมโปร">โซนบิ๊กซี / โลตัส / โฮมโปร</option>
+                            <option value="__custom__">＋ เพิ่มโซนสถานที่เอง</option>
                         </select>
+                        <div id="custom-zone-wrap" class="hidden mt-2">
+                            <div class="flex gap-2">
+                                <input type="text" id="custom-zone-input" maxlength="100"
+                                    placeholder="พิมพ์ชื่อโซนสถานที่ เช่น รอบ มรภ.ส่วนทะเลแก้ว"
+                                    class="flex-1 px-3 py-2 border border-sky-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                                <button type="button" onclick="saveCustomZone()"
+                                    class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold">
+                                    เพิ่มโซน
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">โซนที่เพิ่มจะถูกบันทึกไว้ในเครื่อง และสามารถเลือกใช้ซ้ำในการลงประกาศครั้งต่อไป</p>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะห้องพัก *</label>
@@ -652,21 +794,21 @@
                     <input type="date" id="booking-date" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
                 </div>
 
-                <!-- PromptPay Payment Section (Shows when 'reserve' selected) -->
-                <div id="promptpay-section" class="bg-sky-50/60 p-4 rounded-2xl border border-sky-200 hidden space-y-3">
-                    <p class="text-xs font-bold text-sky-900 text-center">สแกนชำระมัดจำจองห้อง 1,000 บาท</p>
-                    <div class="flex justify-center">
-                        <img src="https://placehold.co/180x180/0284c7/white?text=PromptPay+QR" alt="PromptPay" class="rounded-xl border shadow-sm">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">แนบสลิปชำระเงิน (Demo)</label>
-                        <input type="file" id="booking-slip-input" accept="image/*" class="text-[11px] w-full text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200">
-                    </div>
-                </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">ข้อความเพิ่มเติม</label>
-                    <textarea id="booking-note" rows="2" placeholder="เช่น ขอเข้าดูช่วงบ่าย 14.00 น." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">เลือกเวลา</label>
+                    <select id="booking-note" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        <option value="">-- เลือกเวลา --</option>
+                        <option value="09:00 น.">09:00 น.</option>
+                        <option value="10:00 น.">10:00 น.</option>
+                        <option value="11:00 น.">11:00 น.</option>
+                        <option value="12:00 น.">12:00 น.</option>
+                        <option value="13:00 น.">13:00 น.</option>
+                        <option value="14:00 น.">14:00 น.</option>
+                        <option value="15:00 น.">15:00 น.</option>
+                        <option value="16:00 น.">16:00 น.</option>
+                        <option value="17:00 น.">17:00 น.</option>
+                        <option value="18:00 น.">18:00 น.</option>
+                    </select>
                 </div>
 
                 <div class="pt-2">
@@ -693,8 +835,79 @@
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION POPUP -->
-    <div id="toast" class="fixed bottom-20 md:bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-[70] pointer-events-none">
+    <!-- MODAL 5: REGISTER / FORGOT PASSWORD -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[65] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div class="bg-gradient-to-r from-sky-600 to-indigo-600 p-5 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p id="auth-modal-kicker" class="text-[11px] text-sky-100 font-medium">บัญชีผู้ใช้งาน</p>
+                        <h3 id="auth-modal-title" class="text-xl font-bold mt-0.5">สมัครสมาชิก</h3>
+                    </div>
+                    <button onclick="closeModal('authModal')" class="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div id="auth-register-view" class="hidden">
+                    <p id="auth-register-description" class="text-xs text-slate-500 mb-4">สร้างบัญชีเพื่อเข้าใช้งานระบบ</p>
+                    <form onsubmit="handleRegister(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล *</label>
+                            <input type="text" id="register-name" required placeholder="เช่น สมชาย ใจดี" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมล *</label>
+                            <input type="email" id="register-email" required placeholder="example@email.com" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน *</label>
+                            <input type="password" id="register-password" required minlength="5" placeholder="อย่างน้อย 5 ตัวอักษร" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่าน *</label>
+                            <input type="password" id="register-password-confirm" required minlength="5" placeholder="กรอกรหัสผ่านอีกครั้ง" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold shadow-md transition">
+                            <i class="fa-solid fa-user-plus mr-1"></i> สมัครสมาชิก
+                        </button>
+                    </form>
+                </div>
+
+                <div id="auth-forgot-view" class="hidden">
+                    <p id="auth-forgot-description" class="text-xs text-slate-500 mb-4">กรอกอีเมลที่ใช้สมัครสมาชิกเพื่อกำหนดรหัสผ่านใหม่</p>
+                    <form onsubmit="handleForgotPassword(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมล *</label>
+                            <input type="email" id="forgot-email" required placeholder="example@email.com" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div id="forgot-new-password-wrap" class="hidden">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านใหม่ *</label>
+                            <input type="password" id="forgot-new-password" minlength="5" placeholder="อย่างน้อย 5 ตัวอักษร" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div id="forgot-confirm-password-wrap" class="hidden">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่านใหม่ *</label>
+                            <input type="password" id="forgot-confirm-password" minlength="5" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" class="w-full text-xs px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <button type="submit" id="forgot-submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold shadow-md transition">
+                            <i class="fa-solid fa-key mr-1"></i> ตรวจสอบอีเมล
+                        </button>
+                    </form>
+                </div>
+
+                <div class="text-center mt-4 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="switchAuthModalMode()" id="auth-modal-switch" class="text-[11px] text-sky-600 hover:underline font-semibold">
+                        ลืมรหัสผ่าน?
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+<div id="toast" class="fixed bottom-20 md:bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-[70] pointer-events-none">
         <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
         <span id="toast-message" class="text-xs font-medium">ทำรายการสำเร็จ</span>
     </div>
@@ -712,7 +925,7 @@
                 electricRate: "8 บ./ยูนิต",
                 deposit: "3,000 บาท",
                 address: "ใกล้มรภ.พิบูลสงคราม ทะเลแก้ว ต.บ้านคลอง อ.เมือง จ.พิษณุโลก",
-                mapUrl: "https://maps.google.com",
+                mapUrl: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("ใกล้มรภ.พิบูลสงคราม ทะเลแก้ว ต.บ้านคลอง อ.เมือง จ.พิษณุโลก"),
                 facilities: ["air", "wifi", "parking", "laundry"],
                 images: [
                     "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=800&q=80"
@@ -733,7 +946,7 @@
                 electricRate: "7 บ./ยูนิต",
                 deposit: "5,000 บาท",
                 address: "ซอย 2 ประตู 1 ม.นเรศวร ต.ท่าโพธิ์ อ.เมือง จ.พิษณุโลก",
-                mapUrl: "https://maps.google.com",
+                mapUrl: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("ซอย 2 ประตู 1 ม.นเรศวร ต.ท่าโพธิ์ อ.เมือง จ.พิษณุโลก"),
                 facilities: ["air", "wifi", "pet", "parking", "heater", "keycard"],
                 images: [
                     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
@@ -755,7 +968,7 @@
                 electricRate: "7 บ./ยูนิต",
                 deposit: "4,000 บาท",
                 address: "เลียบคลองชลประทาน ม.นเรศวร ต.ท่าโพธิ์",
-                mapUrl: "",
+                mapUrl: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("เลียบคลองชลประทาน ม.นเรศวร ต.ท่าโพธิ์ อ.เมือง จ.พิษณุโลก"),
                 facilities: ["air", "wifi", "heater", "keycard"],
                 images: [
                     "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80"
@@ -773,14 +986,45 @@
         
         let favorites = [];
         let bookingRequests = [];
+        let reviewsData = [];
+        let activeReviewRoomId = null;
         let activeFacilityFilters = [];
         let uploadedFormImages = [];
         let roomToDeleteId = null;
         
         let isLandlordAuthenticated = false;
         let isTenantAuthenticated = false;
+        let isAdminAuthenticated = false;
+        let currentAdminTab = 'dashboard';
+        let currentAuthModalMode = 'register';
+        let currentAuthModalRole = 'tenant';
+        let forgotPasswordVerified = false;
+
+        // รีเซ็ตข้อมูลที่กรอก/ข้อมูล Demo จากไฟล์ก่อนหน้าให้กลับเป็นค่าเริ่มต้น 1 ครั้ง
+        // ฟังก์ชันระบบและข้อมูลตั้งต้นในโค้ดยังคงอยู่เหมือนเดิม
+        (function resetToInitialStateOnce(){
+            const resetKey = 'phitroom_initial_reset_v1';
+            if(localStorage.getItem(resetKey) !== 'done') {
+                [
+                    'phitroom_data',
+                    'phitroom_favs',
+                    'phitroom_reqs',
+                    'phitroom_accounts',
+                    'phitroom_landlord_auth',
+                    'phitroom_landlord_email',
+                    'phitroom_landlord_name',
+                    'phitroom_tenant_auth',
+                    'phitroom_tenant_email',
+                    'phitroom_tenant_name',
+                    'phitroom_admin_auth',
+                    'phitroom_admin_email'
+                ].forEach(key => localStorage.removeItem(key));
+                localStorage.setItem(resetKey, 'done');
+            }
+        })();
 
         window.onload = function() {
+            initCustomZones();
             if(localStorage.getItem('phitroom_data')) {
                 try { roomsData = JSON.parse(localStorage.getItem('phitroom_data')); } catch(e){}
             }
@@ -790,11 +1034,17 @@
             if(localStorage.getItem('phitroom_reqs')) {
                 try { bookingRequests = JSON.parse(localStorage.getItem('phitroom_reqs')); } catch(e){}
             }
+            if(localStorage.getItem('phitroom_reviews')) {
+                try { reviewsData = JSON.parse(localStorage.getItem('phitroom_reviews')); } catch(e){}
+            }
             if(localStorage.getItem('phitroom_landlord_auth') === 'true') {
                 isLandlordAuthenticated = true;
             }
             if(localStorage.getItem('phitroom_tenant_auth') === 'true') {
                 isTenantAuthenticated = true;
+            }
+            if(localStorage.getItem('phitroom_admin_auth') === 'true') {
+                isAdminAuthenticated = true;
             }
 
             renderAll();
@@ -804,6 +1054,153 @@
             localStorage.setItem('phitroom_data', JSON.stringify(roomsData));
             localStorage.setItem('phitroom_favs', JSON.stringify(favorites));
             localStorage.setItem('phitroom_reqs', JSON.stringify(bookingRequests));
+            localStorage.setItem('phitroom_reviews', JSON.stringify(reviewsData));
+        }
+
+        function getRoomReviews(roomId) {
+            return reviewsData.filter(r => r.roomId === roomId);
+        }
+
+        function getRoomRating(roomId) {
+            const list = getRoomReviews(roomId);
+            if(!list.length) return { avg: 0, count: 0 };
+            const avg = list.reduce((sum, r) => sum + Number(r.rating || 0), 0) / list.length;
+            return { avg: Math.round(avg * 10) / 10, count: list.length };
+        }
+
+        function renderStars(rating, sizeClass = 'text-sm') {
+            const n = Math.max(0, Math.min(5, Number(rating || 0)));
+            return Array.from({length: 5}, (_, i) =>
+                `<i class="${i < n ? 'fa-solid' : 'fa-regular'} fa-star ${sizeClass} ${i < n ? 'text-amber-400' : 'text-slate-300'}"></i>`
+            ).join('');
+        }
+
+        function getRealMapUrl(room) {
+            const address = (room && room.address ? room.address : '').trim();
+            const existing = (room && room.mapUrl ? room.mapUrl : '').trim();
+
+            // ถ้ามีลิงก์แผนที่จริงจากเจ้าของ ให้ใช้ลิงก์นั้น
+            if(existing && !/^https?:\/\/(www\.)?maps\.google\.com\/?$/i.test(existing)) {
+                return existing;
+            }
+
+            // ถ้าไม่มี/เป็นลิงก์ Google Maps หน้าแรก ให้ค้นหาจากที่อยู่จริงของหอพัก
+            if(address) {
+                return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
+            }
+
+            return 'https://www.google.com/maps';
+        }
+
+        function openReviewModal(roomId) {
+            const room = roomsData.find(r => r.id === roomId);
+            if(!room) return;
+            activeReviewRoomId = roomId;
+
+            const title = document.getElementById('review-room-name');
+            const ratingInput = document.getElementById('review-rating');
+            const textInput = document.getElementById('review-text');
+            if(title) title.innerText = room.name;
+            if(ratingInput) ratingInput.value = '5';
+            if(textInput) textInput.value = '';
+
+            updateReviewStarPicker();
+            openModal('reviewModal');
+        }
+
+        function updateReviewStarPicker() {
+            const ratingInput = document.getElementById('review-rating');
+            const picker = document.getElementById('review-star-picker');
+            if(!ratingInput || !picker) return;
+            const rating = Number(ratingInput.value || 5);
+            picker.innerHTML = Array.from({length: 5}, (_, i) => {
+                const value = i + 1;
+                return `<button type="button" onclick="setReviewRating(${value})" aria-label="ให้ ${value} คะแนน" class="transition transform hover:scale-110">
+                    <i class="${value <= rating ? 'fa-solid' : 'fa-regular'} fa-star text-2xl ${value <= rating ? 'text-amber-400' : 'text-slate-300'}"></i>
+                </button>`;
+            }).join('');
+        }
+
+        function setReviewRating(value) {
+            const input = document.getElementById('review-rating');
+            if(input) input.value = value;
+            updateReviewStarPicker();
+        }
+
+        function renderRoomReviews(roomId) {
+            const list = getRoomReviews(roomId);
+            const summary = getRoomRating(roomId);
+            const summaryEl = document.getElementById(`review-summary-${roomId}`);
+            const listEl = document.getElementById(`review-list-${roomId}`);
+
+            if(summaryEl) {
+                summaryEl.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl font-extrabold text-slate-800">${summary.count ? summary.avg.toFixed(1) : '—'}</div>
+                        <div>
+                            <div class="flex items-center gap-0.5">${renderStars(summary.avg, 'text-sm')}</div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">${summary.count} รีวิว</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if(listEl) {
+                listEl.innerHTML = list.length ? list.slice().reverse().map(review => `
+                    <div class="p-3 rounded-xl border border-slate-100 bg-slate-50">
+                        <div class="flex justify-between items-start gap-3">
+                            <div>
+                                <p class="font-semibold text-xs text-slate-800">${review.userName || 'ผู้เช่า'}</p>
+                                <div class="flex items-center gap-0.5 mt-1">${renderStars(review.rating, 'text-[11px]')}</div>
+                            </div>
+                            <span class="text-[10px] text-slate-400">${review.date || ''}</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed mt-2 whitespace-pre-line">${review.text || ''}</p>
+                    </div>
+                `).join('') : `
+                    <div class="text-center py-5 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                        ยังไม่มีรีวิวสำหรับหอพักนี้
+                    </div>
+                `;
+            }
+        }
+
+        function handleReviewSubmit(e) {
+            e.preventDefault();
+            if(!activeReviewRoomId) return;
+
+            const room = roomsData.find(r => r.id === activeReviewRoomId);
+            if(!room) return;
+
+            const textInput = document.getElementById('review-text');
+            const ratingInput = document.getElementById('review-rating');
+            const reviewText = (textInput?.value || '').trim();
+            const rating = Number(ratingInput?.value || 0);
+
+            if(rating < 1 || rating > 5) {
+                showToast('กรุณาเลือกคะแนน 1–5 ดาว', 'fa-star', 'text-amber-400');
+                return;
+            }
+            if(!reviewText) {
+                showToast('กรุณาเขียนข้อความรีวิว', 'fa-comment', 'text-amber-400');
+                textInput?.focus();
+                return;
+            }
+
+            const reviewerName = localStorage.getItem('phitroom_tenant_name') || 'ผู้เช่า';
+            reviewsData.push({
+                id: `review-${Date.now()}`,
+                roomId: room.id,
+                userName: reviewerName,
+                rating,
+                text: reviewText,
+                date: new Date().toLocaleDateString('th-TH')
+            });
+
+            saveData();
+            closeModal('reviewModal');
+            openRoomDetail(room.id);
+            showToast('ส่งรีวิวเรียบร้อยแล้ว', 'fa-star', 'text-amber-400');
         }
 
         function handleLogoClick() {
@@ -819,89 +1216,354 @@
             const tenantAuthContainer = document.getElementById('tenant-auth-container');
             const tenantContainer = document.getElementById('tenant-view-container');
             const landlordContainer = document.getElementById('landlord-view-container');
-            
+            const adminContainer = document.getElementById('admin-view-container');
             const btnTenant = document.getElementById('role-btn-tenant');
             const btnLandlord = document.getElementById('role-btn-landlord');
+            const btnAdmin = document.getElementById('role-btn-admin');
             const badge = document.getElementById('role-indicator-badge');
-
             const desktopTenantNav = document.getElementById('desktop-nav-tenant');
             const desktopLandlordNav = document.getElementById('desktop-nav-landlord');
+            const desktopAdminNav = document.getElementById('desktop-nav-admin');
 
-            const mobTenantGroup = document.getElementById('mob-nav-tenant-group');
-            const mobLandlordGroup = document.getElementById('mob-nav-landlord-group');
+            tenantAuthContainer.classList.add('hidden');
+            tenantContainer.classList.add('hidden');
+            landlordContainer.classList.add('hidden');
+            adminContainer.classList.add('hidden');
+            desktopTenantNav.classList.add('hidden'); desktopTenantNav.classList.remove('md:flex');
+            desktopLandlordNav.classList.add('hidden'); desktopLandlordNav.classList.remove('md:flex');
+            desktopAdminNav.classList.add('hidden'); desktopAdminNav.classList.remove('md:flex');
+            [btnTenant, btnLandlord, btnAdmin].forEach(b => { if(b) b.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5"; });
 
             if(role === 'tenant') {
-                landlordContainer.classList.add('hidden');
-
                 btnTenant.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-sky-600 shadow-sm flex items-center gap-1.5";
-                btnLandlord.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
-                
                 badge.className = "bg-sky-100 text-sky-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-sky-200";
                 badge.innerText = "โหมดผู้เช่า";
-
-                if(!isTenantAuthenticated) {
-                    tenantAuthContainer.classList.remove('hidden');
-                    tenantContainer.classList.add('hidden');
-                    desktopTenantNav.classList.add('hidden');
-                    mobTenantGroup.classList.add('hidden');
-                } else {
-                    tenantAuthContainer.classList.add('hidden');
-                    tenantContainer.classList.remove('hidden');
-                    desktopTenantNav.classList.remove('hidden');
-                    desktopTenantNav.classList.add('md:flex');
-                    mobTenantGroup.classList.remove('hidden');
-                    mobTenantGroup.classList.add('flex');
-                    switchTab(currentTenantTab);
-                }
-
-                desktopLandlordNav.classList.add('hidden');
-                desktopLandlordNav.classList.remove('md:flex');
-                mobLandlordGroup.classList.add('hidden');
-                mobLandlordGroup.classList.remove('flex');
-            } else {
-                tenantAuthContainer.classList.add('hidden');
-                tenantContainer.classList.add('hidden');
-                landlordContainer.classList.remove('hidden');
-
+                if(!isTenantAuthenticated) { tenantAuthContainer.classList.remove('hidden'); }
+                else { tenantContainer.classList.remove('hidden'); desktopTenantNav.classList.remove('hidden'); desktopTenantNav.classList.add('md:flex'); switchTab(currentTenantTab); }
+            } else if(role === 'landlord') {
                 btnLandlord.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-sky-600 shadow-sm flex items-center gap-1.5";
-                btnTenant.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
-
                 badge.className = "bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-indigo-200";
                 badge.innerText = "Landlord Portal";
-
-                desktopTenantNav.classList.add('hidden');
-                desktopTenantNav.classList.remove('md:flex');
-                desktopLandlordNav.classList.remove('hidden');
-                desktopLandlordNav.classList.add('md:flex');
-
-                mobTenantGroup.classList.add('hidden');
-                mobTenantGroup.classList.remove('flex');
-                mobLandlordGroup.classList.remove('hidden');
-                mobLandlordGroup.classList.add('flex');
-
-                renderLandlordConsole();
+                landlordContainer.classList.remove('hidden'); desktopLandlordNav.classList.remove('hidden'); desktopLandlordNav.classList.add('md:flex'); renderLandlordConsole();
+            } else {
+                btnAdmin.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-rose-600 shadow-sm flex items-center gap-1.5";
+                badge.className = "bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-rose-200";
+                badge.innerText = "Admin Portal";
+                adminContainer.classList.remove('hidden');
+                if(!isAdminAuthenticated) {
+                    document.getElementById('admin-auth-card').classList.remove('hidden');
+                    document.getElementById('admin-dashboard-panel').classList.add('hidden');
+                } else {
+                    desktopAdminNav.classList.remove('hidden'); desktopAdminNav.classList.add('md:flex'); renderAdminConsole();
+                }
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        function switchAdminTab(tabId) { currentAdminTab = tabId; renderAdminConsole(); window.scrollTo({top:0, behavior:'smooth'}); }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const email = normalizeEmail(document.getElementById('admin-email').value);
+            const pass = document.getElementById('admin-password').value;
+            if(email === 'admin@phitroom.com' && pass === '12345') {
+                isAdminAuthenticated = true;
+                localStorage.setItem('phitroom_admin_auth','true');
+                localStorage.setItem('phitroom_admin_email',email);
+                document.getElementById('admin-password').value='';
+                renderAdminConsole();
+                showToast('เข้าสู่ระบบแอดมินสำเร็จ');
+            } else { showToast('อีเมลหรือรหัสผ่านแอดมินไม่ถูกต้อง','fa-circle-xmark','text-rose-400'); }
+        }
+
+        function adminLogout() {
+            isAdminAuthenticated=false; localStorage.removeItem('phitroom_admin_auth'); localStorage.removeItem('phitroom_admin_email');
+            switchRole('admin'); showToast('ออกจากระบบแอดมินเรียบร้อย');
+        }
+
+        function toggleAdminListingStatus(roomId) {
+            const room = roomsData.find(r => r.id === roomId); if(!room) return;
+            room.adminStatus = room.adminStatus === 'suspended' ? 'approved' : 'suspended';
+            saveData(); renderAll(); showToast(room.adminStatus === 'approved' ? 'อนุมัติประกาศแล้ว' : 'ระงับประกาศแล้ว');
+        }
+
+        function renderAdminConsole() {
+            const auth = document.getElementById('admin-auth-card'); const panel = document.getElementById('admin-dashboard-panel');
+            if(!isAdminAuthenticated) { auth.classList.remove('hidden'); panel.classList.add('hidden'); return; }
+            auth.classList.add('hidden'); panel.classList.remove('hidden');
+            const accounts = getAuthAccounts();
+            const landlords = accounts.filter(a => a.role === 'landlord').length;
+            const tenants = accounts.filter(a => a.role === 'tenant').length;
+            const approvedListings = roomsData.filter(r => (r.adminStatus || 'approved') === 'approved').length;
+            const suspendedListings = roomsData.filter(r => r.adminStatus === 'suspended').length;
+            const pending = bookingRequests.filter(r=>r.status==='pending').length;
+            const approved = bookingRequests.filter(r=>r.status==='approved').length;
+            const rejected = bookingRequests.filter(r=>r.status==='rejected').length;
+            const appointmentRequests = bookingRequests.filter(r=>r.type !== 'reserve');
+            const reservationRequests = bookingRequests.filter(r=>r.type === 'reserve');
+            // รายรับมัดจำต้องนับจากคำขอจองที่เจ้าของอนุมัติและผู้เช่าแนบสลิปแล้วเท่านั้น
+            const paidReservations = reservationRequests.filter(r=>r.status==='approved' && r.paymentStatus==='slip_uploaded');
+            const approvedUnpaidReservations = reservationRequests.filter(r=>r.status==='approved' && r.paymentStatus!=='slip_uploaded');
+            const revenue = paidReservations.length * 1000;
+            document.getElementById('admin-stat-users').innerText=accounts.length;
+            document.getElementById('admin-stat-listings').innerText=roomsData.length;
+            document.getElementById('admin-stat-requests').innerText=bookingRequests.length;
+            document.getElementById('admin-stat-revenue').innerText=`฿${revenue.toLocaleString()}`;
+            document.getElementById('admin-user-count').innerText=`${accounts.length} คน`;
+            document.getElementById('admin-listing-count').innerText=`${roomsData.length} รายการ`;
+            document.getElementById('admin-user-list').innerHTML = accounts.length ? accounts.map(a=>`<div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex justify-between gap-3"><div><p class="text-xs font-bold text-slate-800">${a.name || '-'}</p><p class="text-[11px] text-slate-500">${a.email}</p></div><span class="text-[10px] font-bold px-2 py-1 rounded-lg ${a.role==='landlord'?'bg-sky-100 text-sky-700':'bg-emerald-100 text-emerald-700'}">${a.role==='landlord'?'เจ้าของหอ':'ผู้เช่า'}</span></div>`).join('') : '<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีบัญชีผู้ใช้งานที่สมัครในระบบ</p>';
+            document.getElementById('admin-report-panel').innerHTML = [
+                ['ผู้เช่าที่สมัคร',tenants,'text-emerald-600'],['เจ้าของหอที่สมัคร',landlords,'text-sky-600'],['ประกาศอนุมัติ',approvedListings,'text-emerald-600'],['ประกาศระงับ',suspendedListings,'text-rose-600'],['รออนุมัติคำขอ',pending,'text-amber-600'],['อนุมัติคำขอแล้ว',approved,'text-sky-600'],['ปฏิเสธคำขอ',rejected,'text-rose-600'],['ขอนัดหมาย',appointmentRequests.length,'text-indigo-600'],['จองห้องพัก',reservationRequests.length,'text-orange-600'],['จองที่รอชำระมัดจำ',approvedUnpaidReservations.length,'text-amber-600'],['มัดจำที่ชำระแล้ว',paidReservations.length,'text-emerald-700'],['รายรับมัดจำจริง',revenue,'text-emerald-700']
+            ].map(x=>`<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><p class="text-[11px] text-slate-500">${x[0]}</p><p class="text-lg font-extrabold ${x[2]}">${x[0].includes('รายรับมัดจำ')?'฿'+Number(x[1]).toLocaleString():x[1]}</p></div>`).join('');
+            document.getElementById('admin-listing-list').innerHTML = roomsData.length ? roomsData.map(r=>{const suspended=r.adminStatus==='suspended'; return `<div class="p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between gap-3"><div><div class="flex items-center gap-2"><h4 class="font-bold text-sm text-slate-800">${r.name}</h4><span class="text-[10px] px-2 py-0.5 rounded-full ${suspended?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700'}">${suspended?'ระงับ':'อนุมัติ'}</span></div><p class="text-xs text-slate-500">${r.zone} • ฿${Number(r.price||0).toLocaleString()}/เดือน</p></div><button onclick="toggleAdminListingStatus('${r.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${suspended?'bg-emerald-600 text-white':'bg-rose-50 text-rose-700'}">${suspended?'อนุมัติประกาศ':'ระงับประกาศ'}</button></div>`}).join('') : '<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีประกาศในระบบ</p>';
+        }
+
+        function getAuthAccounts() {
+            try {
+                return JSON.parse(localStorage.getItem('phitroom_accounts') || '[]');
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function saveAuthAccounts(accounts) {
+            localStorage.setItem('phitroom_accounts', JSON.stringify(accounts));
+        }
+
+        function normalizeEmail(email) {
+            return String(email || '').trim().toLowerCase();
+        }
+
+        function findAccount(role, email) {
+            const target = normalizeEmail(email);
+            return getAuthAccounts().find(a => a.role === role && a.email === target);
+        }
+
+        function openAuthModal(mode, role) {
+            currentAuthModalMode = mode;
+            currentAuthModalRole = role;
+            forgotPasswordVerified = false;
+
+            const modal = document.getElementById('authModal');
+            const registerView = document.getElementById('auth-register-view');
+            const forgotView = document.getElementById('auth-forgot-view');
+            const title = document.getElementById('auth-modal-title');
+            const kicker = document.getElementById('auth-modal-kicker');
+            const registerDesc = document.getElementById('auth-register-description');
+            const forgotDesc = document.getElementById('auth-forgot-description');
+            const switchBtn = document.getElementById('auth-modal-switch');
+
+            registerView.classList.toggle('hidden', mode !== 'register');
+            forgotView.classList.toggle('hidden', mode !== 'forgot');
+
+            const roleText = role === 'tenant' ? 'ผู้เช่า' : 'เจ้าของหอพัก';
+            kicker.innerText = `บัญชี${roleText}`;
+
+            if(mode === 'register') {
+                title.innerText = `สมัครสมาชิก${roleText}`;
+                registerDesc.innerText = `สร้างบัญชี${roleText}เพื่อเข้าใช้งานระบบ`;
+                switchBtn.innerText = 'มีบัญชีแล้ว? เข้าสู่ระบบ';
+            } else {
+                title.innerText = 'ลืมรหัสผ่าน';
+                forgotDesc.innerText = `กรอกอีเมลบัญชี${roleText} เพื่อกำหนดรหัสผ่านใหม่`;
+                switchBtn.innerText = 'ยังไม่มีบัญชี? สมัครสมาชิก';
+            }
+
+            document.getElementById('auth-register-description').dataset.role = role;
+            document.getElementById('auth-forgot-description').dataset.role = role;
+            document.getElementById('forgot-email').value = '';
+            document.getElementById('forgot-new-password').value = '';
+            document.getElementById('forgot-confirm-password').value = '';
+            document.getElementById('forgot-new-password-wrap').classList.add('hidden');
+            document.getElementById('forgot-confirm-password-wrap').classList.add('hidden');
+            document.getElementById('forgot-submit-btn').innerHTML = '<i class="fa-solid fa-key mr-1"></i> ตรวจสอบอีเมล';
+
+            modal.classList.remove('hidden');
+        }
+
+        function switchAuthModalMode() {
+            if(currentAuthModalMode === 'register') {
+                openAuthModal('forgot', currentAuthModalRole);
+            } else {
+                openAuthModal('register', currentAuthModalRole);
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('register-name').value.trim();
+            const emailInput = document.getElementById('register-email');
+            const email = normalizeEmail(emailInput.value);
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-password-confirm').value;
+
+            if(!name) {
+                showToast("กรุณากรอกชื่อ-นามสกุล", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+            if(!emailInput.checkValidity()) {
+                showToast("กรุณากรอกอีเมลให้ถูกต้อง", "fa-circle-xmark", "text-rose-400");
+                emailInput.focus();
+                return;
+            }
+            if(password.length < 5) {
+                showToast("รหัสผ่านต้องมีอย่างน้อย 5 ตัวอักษร", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+            if(password !== confirm) {
+                showToast("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+
+            const accounts = getAuthAccounts();
+            const existing = accounts.find(a => a.email === email);
+
+            if(existing) {
+                if(existing.role === currentAuthModalRole) {
+                    showToast("อีเมลนี้สมัครสมาชิกไว้แล้ว กรุณาเข้าสู่ระบบ", "fa-circle-xmark", "text-rose-400");
+                    return;
+                }
+                showToast("อีเมลนี้ถูกใช้งานกับอีกบทบาทหนึ่งแล้ว", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+
+            accounts.push({
+                id: `${currentAuthModalRole}-${Date.now()}`,
+                role: currentAuthModalRole,
+                name: name,
+                email: email,
+                password: password,
+                createdAt: new Date().toISOString()
+            });
+            saveAuthAccounts(accounts);
+
+            const roleText = currentAuthModalRole === 'tenant' ? 'ผู้เช่า' : 'เจ้าของหอพัก';
+            closeModal('authModal');
+            showToast(`สมัครสมาชิก${roleText}สำเร็จ กรุณาเข้าสู่ระบบ`);
+
+            const emailField = document.getElementById(currentAuthModalRole === 'tenant' ? 'tenant-login-email' : 'landlord-email');
+            if(emailField) emailField.value = email;
+        }
+
+        function handleForgotPassword(e) {
+            e.preventDefault();
+
+            const emailInput = document.getElementById('forgot-email');
+            const email = normalizeEmail(emailInput.value);
+            const account = findAccount(currentAuthModalRole, email);
+
+            if(!emailInput.checkValidity()) {
+                showToast("กรุณากรอกอีเมลให้ถูกต้อง", "fa-circle-xmark", "text-rose-400");
+                emailInput.focus();
+                return;
+            }
+
+            if(!account) {
+                showToast("ไม่พบอีเมลนี้ในบัญชีที่สมัครไว้", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+
+            if(!forgotPasswordVerified) {
+                forgotPasswordVerified = true;
+                document.getElementById('forgot-new-password-wrap').classList.remove('hidden');
+                document.getElementById('forgot-confirm-password-wrap').classList.remove('hidden');
+                document.getElementById('forgot-new-password').required = true;
+                document.getElementById('forgot-confirm-password').required = true;
+                document.getElementById('forgot-submit-btn').innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> เปลี่ยนรหัสผ่าน';
+                showToast("พบบัญชีแล้ว กรุณาตั้งรหัสผ่านใหม่");
+                return;
+            }
+
+            const newPassword = document.getElementById('forgot-new-password').value;
+            const confirmPassword = document.getElementById('forgot-confirm-password').value;
+
+            if(newPassword.length < 5) {
+                showToast("รหัสผ่านใหม่ต้องมีอย่างน้อย 5 ตัวอักษร", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+            if(newPassword !== confirmPassword) {
+                showToast("รหัสผ่านใหม่ไม่ตรงกัน", "fa-circle-xmark", "text-rose-400");
+                return;
+            }
+
+            const accounts = getAuthAccounts();
+            const idx = accounts.findIndex(a => a.id === account.id);
+            if(idx !== -1) {
+                accounts[idx].password = newPassword;
+                accounts[idx].updatedAt = new Date().toISOString();
+                saveAuthAccounts(accounts);
+            }
+
+            closeModal('authModal');
+            showToast("เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสใหม่");
+        }
+
+        // บันทึกผู้ใช้งาน Demo ที่เข้าระบบจริง เพื่อให้สถิติแอดมินนับตามการใช้งาน
+        function ensureDemoUserTracked(role, email) {
+            const normalized = normalizeEmail(email);
+            if(!normalized) return null;
+            const accounts = getAuthAccounts();
+            let account = accounts.find(a => a.role === role && a.email === normalized);
+            if(!account) {
+                account = {
+                    id: `demo-${role}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+                    role: role,
+                    name: role === 'tenant' ? 'ผู้เช่า Demo' : 'เจ้าของหอพัก Demo',
+                    email: normalized,
+                    password: '12345',
+                    demo: true,
+                    lastLoginAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString()
+                };
+                accounts.push(account);
+            } else {
+                account.lastLoginAt = new Date().toISOString();
+            }
+            saveAuthAccounts(accounts);
+            return account;
+        }
+
         function handleTenantLogin(e) {
             e.preventDefault();
-            const pass = document.getElementById('tenant-login-password').value;
-            if(pass === '12345') {
+            const emailInput = document.getElementById('tenant-login-email');
+            const passwordInput = document.getElementById('tenant-login-password');
+            const email = normalizeEmail(emailInput.value);
+            const pass = passwordInput.value;
+
+            if(!emailInput.checkValidity()) {
+                showToast("กรุณากรอกอีเมลให้ถูกต้อง", "fa-circle-xmark", "text-rose-400");
+                emailInput.focus();
+                return;
+            }
+
+            const account = findAccount('tenant', email);
+
+            // บัญชีที่สมัครสมาชิก: ตรวจสอบอีเมล + รหัสผ่านจริง
+            // โหมดเดิมยังคงใช้ได้: อีเมลใดก็ได้ + 12345 สำหรับ Demo
+            if((account && account.password === pass) || (!account && pass === '12345')) {
+                const trackedAccount = account || ensureDemoUserTracked('tenant', email);
+                if(trackedAccount) {
+                    trackedAccount.lastLoginAt = new Date().toISOString();
+                    saveAuthAccounts(getAuthAccounts());
+                }
                 isTenantAuthenticated = true;
                 localStorage.setItem('phitroom_tenant_auth', 'true');
-                document.getElementById('tenant-login-password').value = '';
-                document.getElementById('tenant-login-email').value = '';
+                localStorage.setItem('phitroom_tenant_email', email);
+                if(account) localStorage.setItem('phitroom_tenant_name', account.name);
+                passwordInput.value = '';
                 switchRole('tenant');
                 showToast("เข้าสู่ระบบมุมมองผู้เช่าสำเร็จ");
             } else {
-                showToast("รหัสผ่านไม่ถูกต้อง! กรุณาใช้ 12345", "fa-circle-xmark", "text-rose-400");
+                showToast("อีเมลหรือรหัสผ่านไม่ถูกต้อง หากยังไม่มีบัญชีให้สมัครสมาชิกก่อน", "fa-circle-xmark", "text-rose-400");
             }
         }
 
         function tenantLogout() {
             isTenantAuthenticated = false;
             localStorage.removeItem('phitroom_tenant_auth');
+            localStorage.removeItem('phitroom_tenant_email');
+            localStorage.removeItem('phitroom_tenant_name');
             switchRole('tenant');
             showToast("ออกจากระบบผู้เช่าเรียบร้อย");
         }
@@ -921,12 +1583,6 @@
                         : 'px-3.5 py-2 rounded-xl font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition flex items-center gap-2 text-sm';
                 }
 
-                const mobBtn = document.getElementById(`mob-nav-${t}`);
-                if(mobBtn) {
-                    mobBtn.className = t === tabId
-                        ? 'flex flex-col items-center text-sky-600 font-medium text-[11px]'
-                        : 'flex flex-col items-center text-slate-500 font-medium text-[11px]';
-                }
             });
 
             const activeEl = document.getElementById(`view-${tabId}`);
@@ -942,9 +1598,6 @@
             const navDash = document.getElementById('nav-dashboard');
             const navReqs = document.getElementById('nav-landlord-reqs');
 
-            const mobDash = document.getElementById('mob-nav-dash');
-            const mobReqs = document.getElementById('mob-nav-reqs');
-
             if(tabId === 'dashboard') {
                 dashTab.classList.remove('hidden');
                 reqsTab.classList.add('hidden');
@@ -952,8 +1605,6 @@
                 if(navDash) navDash.className = "px-3.5 py-2 rounded-xl font-medium text-sky-600 bg-sky-50 transition flex items-center gap-2 text-sm";
                 if(navReqs) navReqs.className = "relative px-3.5 py-2 rounded-xl font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition flex items-center gap-2 text-sm";
                 
-                if(mobDash) mobDash.className = "flex flex-col items-center text-sky-600 font-medium text-[11px]";
-                if(mobReqs) mobReqs.className = "flex flex-col items-center text-slate-500 font-medium text-[11px] relative";
             } else {
                 dashTab.classList.add('hidden');
                 reqsTab.classList.remove('hidden');
@@ -961,8 +1612,6 @@
                 if(navReqs) navReqs.className = "relative px-3.5 py-2 rounded-xl font-medium text-sky-600 bg-sky-50 transition flex items-center gap-2 text-sm";
                 if(navDash) navDash.className = "px-3.5 py-2 rounded-xl font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition flex items-center gap-2 text-sm";
 
-                if(mobReqs) mobReqs.className = "flex flex-col items-center text-sky-600 font-medium text-[11px] relative";
-                if(mobDash) mobDash.className = "flex flex-col items-center text-slate-500 font-medium text-[11px]";
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -986,15 +1635,8 @@
 
             const emailInput = document.getElementById('landlord-email');
             const passwordInput = document.getElementById('landlord-password');
-            const email = emailInput.value.trim();
+            const email = normalizeEmail(emailInput.value);
             const pass = passwordInput.value;
-
-            // Demo login: ต้องกรอกอีเมลที่ถูกต้อง และใช้รหัสผ่าน 12345
-            if(!email) {
-                showToast("กรุณากรอกอีเมลเจ้าของหอพัก", "fa-circle-xmark", "text-rose-400");
-                emailInput.focus();
-                return;
-            }
 
             if(!emailInput.checkValidity()) {
                 showToast("กรุณากรอกอีเมลให้ถูกต้อง", "fa-circle-xmark", "text-rose-400");
@@ -1002,29 +1644,35 @@
                 return;
             }
 
-            if(pass !== '12345') {
-                showToast("รหัสผ่านไม่ถูกต้อง! กรุณาใช้ 12345", "fa-circle-xmark", "text-rose-400");
+            const account = findAccount('landlord', email);
+
+            // บัญชีที่สมัครสมาชิก: ตรวจสอบอีเมล + รหัสผ่านจริง
+            // โหมดเดิมยังคงใช้ได้: อีเมลใดก็ได้ + 12345 สำหรับ Demo
+            if((account && account.password === pass) || (!account && pass === '12345')) {
+                const trackedAccount = account || ensureDemoUserTracked('landlord', email);
+                if(trackedAccount) {
+                    trackedAccount.lastLoginAt = new Date().toISOString();
+                    saveAuthAccounts(getAuthAccounts());
+                }
+                isLandlordAuthenticated = true;
+                localStorage.setItem('phitroom_landlord_auth', 'true');
+                localStorage.setItem('phitroom_landlord_email', email);
+                if(account) localStorage.setItem('phitroom_landlord_name', account.name);
+
+                passwordInput.value = '';
+                renderLandlordConsole();
+                showToast("เข้าสู่ระบบ Portal เจ้าของหอพักสำเร็จ");
+            } else {
+                showToast("อีเมลหรือรหัสผ่านไม่ถูกต้อง หากยังไม่มีบัญชีให้สมัครสมาชิกก่อน", "fa-circle-xmark", "text-rose-400");
                 passwordInput.focus();
-                return;
             }
-
-            isLandlordAuthenticated = true;
-
-            // จำสถานะการเข้าสู่ระบบไว้เฉพาะในเครื่องนี้ เพื่อให้ใช้งาน Portal ต่อได้
-            localStorage.setItem('phitroom_landlord_auth', 'true');
-            localStorage.setItem('phitroom_landlord_email', email);
-
-            passwordInput.value = '';
-
-            // หลังเข้าสู่ระบบให้แสดง Portal เจ้าของทันที
-            renderLandlordConsole();
-            showToast("เข้าสู่ระบบ Portal เจ้าของหอพักสำเร็จ");
         }
 
         function landlordLogout() {
             isLandlordAuthenticated = false;
             localStorage.removeItem('phitroom_landlord_auth');
             localStorage.removeItem('phitroom_landlord_email');
+            localStorage.removeItem('phitroom_landlord_name');
             renderLandlordConsole();
             showToast("ออกจากระบบเจ้าของหอพักเรียบร้อย");
         }
@@ -1122,6 +1770,7 @@
                 const statusBadge = room.status === 'ว่าง'
                     ? `<span class="bg-emerald-500/90 backdrop-blur-md text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-sm"><i class="fa-solid fa-circle-check mr-1"></i> ว่างพร้อมอยู่</span>`
                     : `<span class="bg-slate-500/90 backdrop-blur-md text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-sm"><i class="fa-solid fa-circle-xmark mr-1"></i> ห้องเต็ม</span>`;
+                const cardRating = getRoomRating(room.id);
 
                 return `
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg transition duration-200 flex flex-col group">
@@ -1143,7 +1792,18 @@
                                 <p class="text-xs text-slate-500 mt-1 line-clamp-2">${room.description}</p>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div class="mt-3 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-between gap-2">
+                                <button type="button" onclick="openRoomDetail('${room.id}')" class="flex items-center gap-2 text-left hover:opacity-80 transition" title="เปิดดูคะแนนและรีวิว">
+                                    <div class="flex items-center gap-0.5">${renderStars(cardRating.avg, 'text-[13px]')}</div>
+                                    <span class="text-xs font-bold text-slate-700">${cardRating.count ? cardRating.avg.toFixed(1) : 'ยังไม่มีคะแนน'}</span>
+                                    <span class="text-[10px] text-slate-500">(${cardRating.count} รีวิว)</span>
+                                </button>
+                                <button type="button" onclick="openRoomDetail('${room.id}')" class="text-[10px] font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap">
+                                    <i class="fa-solid fa-comments mr-1"></i> ดูรีวิว
+                                </button>
+                            </div>
+
+                            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                                 <div>
                                     <span class="text-[10px] text-slate-400 block">เริ่มต้น</span>
                                     <span class="text-lg font-extrabold text-sky-600">฿${room.price.toLocaleString()}</span>
@@ -1308,6 +1968,7 @@
 
             document.getElementById('form-name').value = room.name || '';
             document.getElementById('form-type').value = room.type || 'หอพักชาย/หญิง';
+            renderCustomZoneOptions(room.zone || '');
             document.getElementById('form-zone').value = room.zone || '';
             document.getElementById('form-status').value = room.status || 'ว่าง';
             document.getElementById('form-price').value = room.price || '';
@@ -1365,8 +2026,108 @@
             `).join('');
         }
 
+
+        // ===== เพิ่มโซนสถานที่เองสำหรับเจ้าของหอพัก =====
+        const CUSTOM_ZONE_STORAGE_KEY = 'phitroom_custom_zones_v1';
+
+        function getCustomZones() {
+            try {
+                const zones = JSON.parse(localStorage.getItem(CUSTOM_ZONE_STORAGE_KEY) || '[]');
+                return Array.isArray(zones) ? zones.filter(z => typeof z === 'string' && z.trim()) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveCustomZones(zones) {
+            localStorage.setItem(
+                CUSTOM_ZONE_STORAGE_KEY,
+                JSON.stringify([...new Set(zones.map(z => z.trim()).filter(Boolean))])
+            );
+        }
+
+        function renderCustomZoneOptions(selectedValue = '') {
+            const select = document.getElementById('form-zone');
+            if (!select) return;
+
+            [...select.options].forEach(option => {
+                if (option.dataset.customZone === 'true') option.remove();
+            });
+
+            const customZones = getCustomZones();
+            const addOption = [...select.options].find(option => option.value === '__custom__');
+
+            customZones.forEach(zone => {
+                const option = document.createElement('option');
+                option.value = zone;
+                option.textContent = zone;
+                option.dataset.customZone = 'true';
+                select.insertBefore(option, addOption || null);
+            });
+
+            if (selectedValue) select.value = selectedValue;
+        }
+
+        function toggleCustomZoneInput() {
+            const select = document.getElementById('form-zone');
+            const wrap = document.getElementById('custom-zone-wrap');
+            const input = document.getElementById('custom-zone-input');
+            if (!select || !wrap) return;
+
+            if (select.value === '__custom__') {
+                wrap.classList.remove('hidden');
+                if (input) setTimeout(() => input.focus(), 0);
+            } else {
+                wrap.classList.add('hidden');
+                if (input) input.value = '';
+            }
+        }
+
+        function saveCustomZone() {
+            const input = document.getElementById('custom-zone-input');
+            const select = document.getElementById('form-zone');
+            if (!input || !select) return;
+
+            const zone = input.value.trim();
+
+            if (!zone) {
+                showToast("กรุณากรอกชื่อโซนสถานที่", "fa-location-dot", "text-amber-400");
+                input.focus();
+                return;
+            }
+
+            const zones = getCustomZones();
+            const exists = zones.some(z => z.toLowerCase() === zone.toLowerCase());
+
+            if (!exists) {
+                zones.push(zone);
+                saveCustomZones(zones);
+            }
+
+            renderCustomZoneOptions(zone);
+            input.value = '';
+            document.getElementById('custom-zone-wrap')?.classList.add('hidden');
+
+            showToast(
+                exists ? `เลือกโซน "${zone}" เรียบร้อยแล้ว` : `เพิ่มโซน "${zone}" เรียบร้อยแล้ว`,
+                "fa-location-dot",
+                "text-emerald-400"
+            );
+        }
+
+        function initCustomZones() {
+            renderCustomZoneOptions();
+        }
+
         function handleFormSubmit(e) {
             e.preventDefault();
+
+            const selectedZone = document.getElementById('form-zone').value;
+            if (selectedZone === '__custom__') {
+                toggleCustomZoneInput();
+                showToast("กรุณากรอกชื่อโซนใหม่ แล้วกด “เพิ่มโซน” ก่อนบันทึกประกาศ", "fa-location-dot", "text-amber-400");
+                return;
+            }
             const roomId = document.getElementById('form-room-id').value;
             const facilities = [];
             if(document.getElementById('chk-air').checked) facilities.push('air');
@@ -1415,6 +2176,7 @@
 
         function resetForm() {
             document.getElementById('roomForm').reset();
+            toggleCustomZoneInput();
             document.getElementById('form-room-id').value = '';
             document.getElementById('modal-form-title').innerText = "ลงประกาศหอพักใหม่";
             document.getElementById('btn-submit-form').innerText = "บันทึกข้อมูล";
@@ -1459,10 +2221,8 @@
             
             if(favRooms.length > 0) {
                 document.getElementById('fav-count-badge').classList.remove('hidden');
-                document.getElementById('mob-fav-badge').classList.remove('hidden');
             } else {
                 document.getElementById('fav-count-badge').classList.add('hidden');
-                document.getElementById('mob-fav-badge').classList.add('hidden');
             }
 
             if(favRooms.length === 0) {
@@ -1514,6 +2274,9 @@
                 laundry: '<i class="fa-solid fa-soap text-blue-500"></i> เครื่องซักผ้าหยอดเหรียญ'
             };
 
+            const rating = getRoomRating(room.id);
+            const mapUrl = getRealMapUrl(room);
+
             const contentHtml = `
                 <div class="p-6 space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2 rounded-2xl overflow-hidden bg-slate-100">
@@ -1530,6 +2293,11 @@
                             <span class="bg-sky-100 text-sky-700 text-xs px-2.5 py-1 rounded-full font-semibold">${room.zone}</span>
                             <h2 class="text-2xl font-bold text-slate-800 mt-2">${room.name}</h2>
                             <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-location-dot"></i> ${room.address}</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <div class="flex items-center gap-0.5">${renderStars(rating.avg, 'text-sm')}</div>
+                                <span class="text-xs font-semibold text-slate-700">${rating.count ? rating.avg.toFixed(1) : 'ยังไม่มีคะแนน'}</span>
+                                <span class="text-[11px] text-slate-400">(${rating.count} รีวิว)</span>
+                            </div>
                         </div>
                         <div class="text-left md:text-right">
                             <span class="text-xs text-slate-400 block">ราคาค่าเช่า</span>
@@ -1565,13 +2333,37 @@
                         <p class="text-xs text-slate-600 leading-relaxed whitespace-pre-line">${room.description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
                     </div>
 
+                    <!-- รีวิวและคะแนน -->
+                    <section class="rounded-2xl border border-amber-100 bg-amber-50/40 p-4">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-star text-amber-400"></i> คะแนนและรีวิวจากผู้เช่า
+                                </h4>
+                                <p class="text-[11px] text-slate-500 mt-1">เปิดดูรีวิวเดิม หรือส่งรีวิวของคุณได้</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="document.getElementById('review-list-${room.id}')?.scrollIntoView({behavior:'smooth',block:'nearest'})" class="px-3 py-2 bg-white hover:bg-slate-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-semibold transition">
+                                    <i class="fa-solid fa-comments mr-1"></i> ดูรีวิว
+                                </button>
+                                <button onclick="openReviewModal('${room.id}')" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-xs font-semibold shadow-sm transition">
+                                    <i class="fa-solid fa-pen mr-1"></i> ส่งรีวิว
+                                </button>
+                            </div>
+                        </div>
+                        <div id="review-summary-${room.id}" class="mb-3"></div>
+                        <div id="review-list-${room.id}" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                    </section>
+
                     <div class="bg-sky-50 p-4 rounded-2xl border border-sky-100 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
                             <p class="text-xs text-sky-800 font-semibold">ติดต่อสอบถามเจ้าของหอพัก</p>
                             <p class="text-sm font-bold text-slate-800 mt-0.5"><i class="fa-solid fa-phone text-sky-600 mr-1"></i> ${room.phone} ${room.lineId ? `| LINE: ${room.lineId}` : ''}</p>
                         </div>
                         <div class="flex gap-2 w-full md:w-auto">
-                            ${room.mapUrl ? `<a href="${room.mapUrl}" target="_blank" class="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-50 transition text-center flex-1 md:flex-none"><i class="fa-solid fa-map-location-dot mr-1"></i> ดูแผนที่</a>` : ''}
+                            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-50 transition text-center flex-1 md:flex-none">
+                                <i class="fa-solid fa-map-location-dot mr-1"></i> ดูแผนที่
+                            </a>
                             <button onclick="closeModal('roomDetailModal'); openBookingModal('${room.id}');" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold shadow-md transition flex-1 md:flex-none">
                                 นัดดูห้อง / จองห้องนี้
                             </button>
@@ -1581,6 +2373,7 @@
             `;
 
             document.getElementById('detail-modal-content').innerHTML = contentHtml;
+            renderRoomReviews(room.id);
             openModal('roomDetailModal');
         }
 
@@ -1589,14 +2382,30 @@
             if(!room) return;
             document.getElementById('booking-room-id').value = room.id;
             document.getElementById('booking-room-name').innerText = room.name;
+
+            // ทุกครั้งที่เปิดหน้าจอง ให้เริ่มต้นเป็น "นัดหมาย" และซ่อนส่วนแนบสลิป
+            const typeEl = document.getElementById('booking-type');
+            if(typeEl) typeEl.value = 'appointment';
+            togglePromptPaySection();
+
             openModal('bookingModal');
         }
 
         function togglePromptPaySection() {
-            const type = document.getElementById('booking-type').value;
+            const typeEl = document.getElementById('booking-type');
             const sec = document.getElementById('promptpay-section');
-            if(type === 'reserve') sec.classList.remove('hidden');
-            else sec.classList.add('hidden');
+            const slipInput = document.getElementById('booking-slip-input');
+            if(!typeEl || !sec) return;
+
+            // แสดงส่วนชำระเงินและแนบสลิปเฉพาะเมื่อเลือก "จองห้องพัก (พร้อมชำระมัดจำ)" เท่านั้น
+            const isReserve = typeEl.value === 'reserve';
+            sec.classList.toggle('hidden', !isReserve);
+
+            // เมื่อเป็นการนัดหมาย ไม่ต้องเก็บ/บังคับไฟล์สลิป
+            if(slipInput) {
+                slipInput.required = false;
+                if(!isReserve) slipInput.value = '';
+            }
         }
 
         function handleBookingSubmit(e) {
@@ -1621,17 +2430,25 @@
             saveData();
             closeModal('bookingModal');
             document.getElementById('bookingForm').reset();
+            // หลังส่งคำขอแล้ว ให้ซ่อนส่วนแนบสลิปกลับทันที
+            togglePromptPaySection();
             renderAll();
             showToast("ส่งคำขอนัดหมาย/จองเรียบร้อยแล้ว");
         }
 
         function renderNotifications() {
-            const landlordList = document.getElementById('landlord-requests-list');
-            const tenantList = document.getElementById('tenant-requests-list');
+            const landlordAppointmentList = document.getElementById('landlord-appointment-list');
+            const landlordReservationList = document.getElementById('landlord-reservation-list');
+            const tenantAppointmentList = document.getElementById('tenant-appointment-list');
+            const tenantReservationList = document.getElementById('tenant-reservation-list');
 
             const pendingCount = bookingRequests.filter(r => r.status === 'pending').length;
+            const appointmentRequests = bookingRequests.filter(r => r.type !== 'reserve');
+            const reservationRequests = bookingRequests.filter(r => r.type === 'reserve');
 
             document.getElementById('landlord-req-count').innerText = `${bookingRequests.length} รายการ`;
+            document.getElementById('landlord-appointment-count').innerText = `${appointmentRequests.length} รายการ`;
+            document.getElementById('landlord-reservation-count').innerText = `${reservationRequests.length} รายการ`;
             document.getElementById('tenant-req-count').innerText = `${bookingRequests.length} รายการ`;
 
             const badgeLandlord = document.getElementById('landlord-req-badge');
@@ -1645,18 +2462,30 @@
             }
 
             const badgeTenant = document.getElementById('tenant-notif-badge');
+            // ตัวเลขของผู้เช่า = จำนวนคำขอจองที่เจ้าของอนุมัติแล้วและผู้เช่ายังไม่ได้เปิดอ่าน
+            const unreadApprovalCount = bookingRequests.filter(r => r.status === 'approved' && r.approvalRead !== true).length;
             if(badgeTenant) {
-                if(bookingRequests.length > 0) badgeTenant.classList.remove('hidden');
-                else badgeTenant.classList.add('hidden');
+                badgeTenant.innerText = unreadApprovalCount;
+                if(unreadApprovalCount > 0) {
+                    badgeTenant.classList.remove('hidden');
+                    badgeTenant.classList.add('inline-flex');
+                } else {
+                    badgeTenant.classList.add('hidden');
+                    badgeTenant.classList.remove('inline-flex');
+                }
             }
 
             if(bookingRequests.length === 0) {
-                landlordList.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">ไม่มีคำขอนัดหมายเข้ามาในระบบ</p>`;
-                tenantList.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">คุณยังไม่มีประวัติการส่งคำขอนัดหมาย</p>`;
+                landlordAppointmentList.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">ยังไม่มีคำขอนัดหมายเข้ามาในระบบ</p>`;
+                landlordReservationList.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">ยังไม่มีคำขอจองห้องพักเข้ามาในระบบ</p>`;
+                tenantAppointmentList.innerHTML = `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีประวัติคำขอนัดหมาย</p>`;
+                tenantReservationList.innerHTML = `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีประวัติการจองห้องพัก</p>`;
+                document.getElementById('tenant-appointment-count').innerText = '0 รายการ';
+                document.getElementById('tenant-reservation-count').innerText = '0 รายการ';
                 return;
             }
 
-            landlordList.innerHTML = bookingRequests.map(req => {
+            const renderLandlordRequest = (req) => {
                 const statusBadge = req.status === 'pending'
                     ? `<span class="bg-amber-100 text-amber-700 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">รออนุมัติ</span>`
                     : req.status === 'approved'
@@ -1683,29 +2512,100 @@
                         ` : ''}
                     </div>
                 `;
-            }).join('');
+            };
 
-            tenantList.innerHTML = bookingRequests.map(req => `
-                <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
-                    <div class="flex justify-between items-center">
+            landlordAppointmentList.innerHTML = appointmentRequests.length
+                ? appointmentRequests.map(renderLandlordRequest).join('')
+                : `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีคำขอนัดหมายเข้ามาในระบบ</p>`;
+
+            landlordReservationList.innerHTML = reservationRequests.length
+                ? reservationRequests.map(renderLandlordRequest).join('')
+                : `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีคำขอจองห้องพักเข้ามาในระบบ</p>`;
+
+            const renderTenantRequest = (req) => `
+                <div class="p-4 rounded-2xl border border-slate-200 bg-white space-y-1.5 shadow-sm">
+                    <div class="flex justify-between items-center gap-3">
                         <h5 class="font-bold text-slate-800 text-sm">${req.roomName}</h5>
                         <span class="text-xs font-bold ${req.status === 'approved' ? 'text-emerald-600' : req.status === 'rejected' ? 'text-rose-600' : 'text-amber-600'}">
                             ${req.status === 'approved' ? 'อนุมัติเรียบร้อย' : req.status === 'rejected' ? 'ไม่อนุมัติ' : 'กำลังรอยืนยัน'}
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500">ประเภท: ${req.type === 'reserve' ? 'จองห้อง' : 'นัดดูห้อง'} | วันที่นัด: ${req.date}</p>
+                    <p class="text-xs text-slate-500">วันที่ต้องการ: <span class="font-semibold text-slate-700">${req.date}</span></p>
+                    ${req.note ? `<p class="text-xs text-slate-500">เวลา: ${req.note}</p>` : ''}
+                    ${req.type === 'reserve' && req.status === 'approved' ? `
+                        <div class="mt-3 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-bold text-emerald-800">ชำระมัดจำจองห้อง</p>
+                                    <p class="text-[11px] text-emerald-700 mt-0.5">เจ้าของหอพักอนุมัติคำขอแล้ว กรุณาชำระมัดจำ</p>
+                                </div>
+                                <span class="text-lg font-extrabold text-emerald-700">฿1,000</span>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-emerald-100 p-3 text-center">
+                                <p class="text-[11px] font-semibold text-slate-600 mb-2">สแกนชำระมัดจำจองห้อง 1,000 บาท</p>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PHITROOM-DEMO-DEPOSIT-1000" alt="QR ชำระมัดจำ Demo" class="w-36 h-36 mx-auto rounded-xl border border-slate-200">
+                                <p class="text-[10px] text-slate-400 mt-2">QR พร้อมเพย์ (Demo)</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">แนบสลิปชำระเงิน (Demo)</label>
+                                <input type="file" accept="image/*,.pdf" onchange="handleSlipUpload('${req.id}', this)" class="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl text-xs">
+                                <p id="slip-status-${req.id}" class="text-[11px] text-slate-500 mt-1">${req.slipName ? `แนบไฟล์แล้ว: ${req.slipName}` : 'รองรับรูปภาพหรือ PDF สำหรับการทดลองระบบ'}</p>
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
-            `).join('');
+            `;
+
+            document.getElementById('tenant-appointment-count').innerText = `${appointmentRequests.length} รายการ`;
+            document.getElementById('tenant-reservation-count').innerText = `${reservationRequests.length} รายการ`;
+
+            tenantAppointmentList.innerHTML = appointmentRequests.length
+                ? appointmentRequests.map(renderTenantRequest).join('')
+                : `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีประวัติคำขอนัดหมาย</p>`;
+
+            tenantReservationList.innerHTML = reservationRequests.length
+                ? reservationRequests.map(renderTenantRequest).join('')
+                : `<p class="text-xs text-slate-400 text-center py-5">ยังไม่มีประวัติการจองห้องพัก</p>`;
+        }
+
+        function handleSlipUpload(reqId, input) {
+            const req = bookingRequests.find(r => r.id === reqId);
+            if(!req || !input || !input.files || !input.files[0]) return;
+            req.slipName = input.files[0].name;
+            req.paymentStatus = 'slip_uploaded';
+            saveData();
+            const statusEl = document.getElementById(`slip-status-${reqId}`);
+            if(statusEl) statusEl.innerText = `แนบไฟล์แล้ว: ${req.slipName}`;
+            showToast('แนบสลิปชำระเงิน (Demo) เรียบร้อยแล้ว');
         }
 
         function updateRequestStatus(reqId, newStatus) {
             const req = bookingRequests.find(r => r.id === reqId);
             if(req) {
                 req.status = newStatus;
+                // เมื่อเจ้าของอนุมัติ ให้สร้างแจ้งเตือนใหม่สำหรับผู้เช่า
+                if(newStatus === 'approved') {
+                    req.approvalRead = false;
+                    req.approvalNotifiedAt = new Date().toISOString();
+                }
                 saveData();
                 renderAll();
                 showToast(`อัปเดตสถานะคำขอเรียบร้อยแล้ว`);
             }
+        }
+
+        // เมื่อผู้เช่าเปิดหน้า "คำขอของคุณ" ให้ถือว่าอ่านแจ้งเตือนอนุมัติแล้ว
+        function openTenantRequestsAndMarkRead() {
+            let changed = false;
+            bookingRequests.forEach(req => {
+                if(req.status === 'approved' && req.approvalRead !== true) {
+                    req.approvalRead = true;
+                    changed = true;
+                }
+            });
+            if(changed) saveData();
+            switchTab('tenant-notif');
+            renderNotifications();
         }
 
         function renderAll() {
@@ -1715,8 +2615,17 @@
             applyFilters();
             renderFavorites();
             renderLandlordConsole();
+            renderAdminConsole();
             renderNotifications();
         }
+
+        // ปิดหน้าต่างสมัครสมาชิก/ลืมรหัสด้วยปุ่ม Esc โดยไม่กระทบฟังก์ชันเดิม
+        document.addEventListener('keydown', function(e) {
+            if(e.key === 'Escape') {
+                const modal = document.getElementById('authModal');
+                if(modal && !modal.classList.contains('hidden')) closeModal('authModal');
+            }
+        });
     </script>
 </body>
 </html>
