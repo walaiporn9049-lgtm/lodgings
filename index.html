@@ -52,7 +52,7 @@
 <body class="h-full flex flex-col text-slate-800">
 
     <!-- Navigation Bar -->
-    <header class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 shadow-sm">
+    <header id="main-navigation-header" class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
@@ -369,8 +369,8 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-5 border-b border-slate-100 flex justify-between items-center"><div><h3 class="font-bold text-slate-800">จัดการผู้ใช้งาน</h3><p class="text-[11px] text-slate-400">ผู้เช่าและเจ้าของหอพักแยกจากแอดมิน</p></div><span id="admin-user-count" class="text-xs font-bold text-rose-600">0 คน</span></div>
-                        <div id="admin-user-list" class="p-4 space-y-2 max-h-80 overflow-auto"></div>
+                        <div class="p-5 border-b border-slate-100 flex justify-between items-center gap-3"><div><h3 class="font-bold text-slate-800">จัดการผู้ใช้งาน</h3><p class="text-[11px] text-slate-400">แก้ไขข้อมูล เปิดใช้งาน ระงับ หรือลบบัญชีผู้เช่าและเจ้าของหอพักได้จริง</p></div><span id="admin-user-count" class="text-xs font-bold text-rose-600 shrink-0">0 คน</span></div>
+                        <div id="admin-user-list" class="p-4 space-y-2 max-h-[520px] overflow-auto"></div>
                     </section>
                     <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                         <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-slate-800">รายงานสถิติแบบละเอียด</h3><p class="text-[11px] text-slate-400">สรุปสถานะคำขอและประกาศในระบบ</p></div>
@@ -906,6 +906,23 @@
         </div>
     </div>
 
+
+    <!-- MODAL: ADMIN USER MANAGEMENT -->
+    <div id="adminUserModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[68] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div class="bg-gradient-to-r from-rose-600 to-orange-500 p-5 text-white">
+                <div class="flex items-center justify-between"><div><p class="text-[11px] text-rose-100 font-medium">Admin Control Center</p><h3 class="text-xl font-bold">แก้ไขข้อมูลผู้ใช้งาน</h3></div><button type="button" onclick="closeAdminUserModal()" class="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button></div>
+            </div>
+            <form onsubmit="saveAdminUser(event)" class="p-6 space-y-4">
+                <input type="hidden" id="admin-edit-user-id">
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล *</label><input id="admin-edit-user-name" type="text" required class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1">อีเมล *</label><input id="admin-edit-user-email" type="email" required class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1">บทบาท</label><select id="admin-edit-user-role" disabled class="w-full px-3 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs text-slate-500"><option value="tenant">ผู้เช่า</option><option value="landlord">เจ้าของหอพัก</option></select></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านใหม่ <span class="font-normal text-slate-400">(เว้นว่างหากไม่เปลี่ยน)</span></label><input id="admin-edit-user-password" type="password" minlength="5" placeholder="อย่างน้อย 5 ตัวอักษร" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"></div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100"><button type="button" onclick="closeAdminUserModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium">ยกเลิก</button><button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md">บันทึกการแก้ไข</button></div>
+            </form>
+        </div>
+    </div>
     
 <div id="toast" class="fixed bottom-20 md:bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-[70] pointer-events-none">
         <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
@@ -1224,6 +1241,7 @@
             const desktopTenantNav = document.getElementById('desktop-nav-tenant');
             const desktopLandlordNav = document.getElementById('desktop-nav-landlord');
             const desktopAdminNav = document.getElementById('desktop-nav-admin');
+            const mainNavigationHeader = document.getElementById('main-navigation-header');
 
             tenantAuthContainer.classList.add('hidden');
             tenantContainer.classList.add('hidden');
@@ -1244,7 +1262,17 @@
                 btnLandlord.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-sky-600 shadow-sm flex items-center gap-1.5";
                 badge.className = "bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-indigo-200";
                 badge.innerText = "Landlord Portal";
-                landlordContainer.classList.remove('hidden'); desktopLandlordNav.classList.remove('hidden'); desktopLandlordNav.classList.add('md:flex'); renderLandlordConsole();
+                landlordContainer.classList.remove('hidden');
+                renderLandlordConsole();
+                // หน้าเข้าสู่ระบบเจ้าของหอพักไม่แสดงแถบเมนู
+                // เมนูจะแสดงหลังเข้าสู่ระบบสำเร็จเท่านั้น
+                if(isLandlordAuthenticated) {
+                    mainNavigationHeader.classList.remove('hidden');
+                    desktopLandlordNav.classList.remove('hidden');
+                    desktopLandlordNav.classList.add('md:flex');
+                } else {
+                    mainNavigationHeader.classList.add('hidden');
+                }
             } else {
                 btnAdmin.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-rose-600 shadow-sm flex items-center gap-1.5";
                 badge.className = "bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-rose-200";
@@ -1311,11 +1339,47 @@
             document.getElementById('admin-stat-revenue').innerText=`฿${revenue.toLocaleString()}`;
             document.getElementById('admin-user-count').innerText=`${accounts.length} คน`;
             document.getElementById('admin-listing-count').innerText=`${roomsData.length} รายการ`;
-            document.getElementById('admin-user-list').innerHTML = accounts.length ? accounts.map(a=>`<div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex justify-between gap-3"><div><p class="text-xs font-bold text-slate-800">${a.name || '-'}</p><p class="text-[11px] text-slate-500">${a.email}</p></div><span class="text-[10px] font-bold px-2 py-1 rounded-lg ${a.role==='landlord'?'bg-sky-100 text-sky-700':'bg-emerald-100 text-emerald-700'}">${a.role==='landlord'?'เจ้าของหอ':'ผู้เช่า'}</span></div>`).join('') : '<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีบัญชีผู้ใช้งานที่สมัครในระบบ</p>';
+            document.getElementById('admin-user-list').innerHTML = accounts.length ? accounts.map(a=>{
+                const suspended = a.status === 'suspended';
+                const roleText = a.role === 'landlord' ? 'เจ้าของหอ' : 'ผู้เช่า';
+                const roleClass = a.role === 'landlord' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
+                return `<div class="p-3 rounded-xl bg-slate-50 border ${suspended?'border-rose-200 bg-rose-50/40':'border-slate-100'} space-y-3">
+                    <div class="min-w-0"><div class="flex items-center gap-2 flex-wrap"><p class="text-xs font-bold text-slate-800">${escapeHtml(a.name || '-')}</p><span class="text-[10px] font-bold px-2 py-0.5 rounded-lg ${roleClass}">${roleText}</span><span class="text-[10px] font-bold px-2 py-0.5 rounded-lg ${suspended?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700'}">${suspended?'ระงับการใช้งาน':'ใช้งานปกติ'}</span></div><p class="text-[11px] text-slate-500 truncate mt-1">${escapeHtml(a.email || '-')}</p></div>
+                    <div class="flex flex-wrap gap-2"><button onclick="openAdminUserEdit('${a.id}')" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-rose-300 hover:text-rose-600 text-[11px] font-semibold"><i class="fa-solid fa-pen-to-square mr-1"></i>แก้ไข</button><button onclick="toggleAdminUserStatus('${a.id}')" class="px-3 py-1.5 rounded-lg text-[11px] font-semibold ${suspended?'bg-emerald-600 text-white hover:bg-emerald-500':'bg-amber-50 text-amber-700 hover:bg-amber-100'}"><i class="fa-solid ${suspended?'fa-user-check':'fa-user-slash'} mr-1"></i>${suspended?'เปิดใช้งาน':'ระงับ'}</button><button onclick="deleteAdminUser('${a.id}')" class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-semibold"><i class="fa-solid fa-trash-can mr-1"></i>ลบบัญชี</button></div>
+                </div>`;
+            }).join('') : '<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีบัญชีผู้ใช้งานที่สมัครในระบบ</p>';
             document.getElementById('admin-report-panel').innerHTML = [
                 ['ผู้เช่าที่สมัคร',tenants,'text-emerald-600'],['เจ้าของหอที่สมัคร',landlords,'text-sky-600'],['ประกาศอนุมัติ',approvedListings,'text-emerald-600'],['ประกาศระงับ',suspendedListings,'text-rose-600'],['รออนุมัติคำขอ',pending,'text-amber-600'],['อนุมัติคำขอแล้ว',approved,'text-sky-600'],['ปฏิเสธคำขอ',rejected,'text-rose-600'],['ขอนัดหมาย',appointmentRequests.length,'text-indigo-600'],['จองห้องพัก',reservationRequests.length,'text-orange-600'],['จองที่รอชำระมัดจำ',approvedUnpaidReservations.length,'text-amber-600'],['มัดจำที่ชำระแล้ว',paidReservations.length,'text-emerald-700'],['รายรับมัดจำจริง',revenue,'text-emerald-700']
             ].map(x=>`<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><p class="text-[11px] text-slate-500">${x[0]}</p><p class="text-lg font-extrabold ${x[2]}">${x[0].includes('รายรับมัดจำ')?'฿'+Number(x[1]).toLocaleString():x[1]}</p></div>`).join('');
             document.getElementById('admin-listing-list').innerHTML = roomsData.length ? roomsData.map(r=>{const suspended=r.adminStatus==='suspended'; return `<div class="p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between gap-3"><div><div class="flex items-center gap-2"><h4 class="font-bold text-sm text-slate-800">${r.name}</h4><span class="text-[10px] px-2 py-0.5 rounded-full ${suspended?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700'}">${suspended?'ระงับ':'อนุมัติ'}</span></div><p class="text-xs text-slate-500">${r.zone} • ฿${Number(r.price||0).toLocaleString()}/เดือน</p></div><button onclick="toggleAdminListingStatus('${r.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${suspended?'bg-emerald-600 text-white':'bg-rose-50 text-rose-700'}">${suspended?'อนุมัติประกาศ':'ระงับประกาศ'}</button></div>`}).join('') : '<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีประกาศในระบบ</p>';
+        }
+
+        function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
+
+        function openAdminUserEdit(userId) {
+            if(!isAdminAuthenticated) return;
+            const account = getAuthAccounts().find(a=>a.id===userId);
+            if(!account) return showToast('ไม่พบบัญชีผู้ใช้งาน','fa-circle-xmark','text-rose-400');
+            document.getElementById('admin-edit-user-id').value=account.id; document.getElementById('admin-edit-user-name').value=account.name||''; document.getElementById('admin-edit-user-email').value=account.email||''; document.getElementById('admin-edit-user-role').value=account.role||'tenant'; document.getElementById('admin-edit-user-password').value=''; document.getElementById('adminUserModal').classList.remove('hidden');
+        }
+        function closeAdminUserModal(){ const m=document.getElementById('adminUserModal'); if(m)m.classList.add('hidden'); }
+        function saveAdminUser(e){
+            e.preventDefault(); if(!isAdminAuthenticated)return;
+            const id=document.getElementById('admin-edit-user-id').value, name=document.getElementById('admin-edit-user-name').value.trim(), emailInput=document.getElementById('admin-edit-user-email'), email=normalizeEmail(emailInput.value), pass=document.getElementById('admin-edit-user-password').value;
+            if(!name)return showToast('กรุณากรอกชื่อผู้ใช้งาน','fa-circle-xmark','text-rose-400');
+            if(!emailInput.checkValidity())return showToast('กรุณากรอกอีเมลให้ถูกต้อง','fa-circle-xmark','text-rose-400');
+            if(pass&&pass.length<5)return showToast('รหัสผ่านต้องมีอย่างน้อย 5 ตัวอักษร','fa-circle-xmark','text-rose-400');
+            const accounts=getAuthAccounts(), i=accounts.findIndex(a=>a.id===id); if(i<0)return showToast('ไม่พบบัญชีผู้ใช้งาน','fa-circle-xmark','text-rose-400');
+            if(accounts.some((a,j)=>j!==i&&normalizeEmail(a.email)===email))return showToast('อีเมลนี้ถูกใช้งานแล้ว','fa-circle-xmark','text-rose-400');
+            accounts[i].name=name; accounts[i].email=email; if(pass)accounts[i].password=pass; accounts[i].updatedAt=new Date().toISOString(); saveAuthAccounts(accounts); closeAdminUserModal(); renderAdminConsole(); showToast('แก้ไขข้อมูลผู้ใช้งานเรียบร้อยแล้ว');
+        }
+        function toggleAdminUserStatus(userId){
+            if(!isAdminAuthenticated)return; const accounts=getAuthAccounts(), a=accounts.find(x=>x.id===userId); if(!a)return showToast('ไม่พบบัญชีผู้ใช้งาน','fa-circle-xmark','text-rose-400');
+            const suspend=a.status!=='suspended'; a.status=suspend?'suspended':'active'; a.statusUpdatedAt=new Date().toISOString(); saveAuthAccounts(accounts); renderAdminConsole(); showToast(suspend?`ระงับบัญชี ${a.email} แล้ว`:`เปิดใช้งานบัญชี ${a.email} แล้ว`);
+        }
+        function deleteAdminUser(userId){
+            if(!isAdminAuthenticated)return; const accounts=getAuthAccounts(), i=accounts.findIndex(x=>x.id===userId); if(i<0)return showToast('ไม่พบบัญชีผู้ใช้งาน','fa-circle-xmark','text-rose-400'); const a=accounts[i];
+            if(!confirm(`ยืนยันลบบัญชี ${a.email} หรือไม่?\nการลบจะไม่สามารถกู้คืนได้`))return; accounts.splice(i,1); saveAuthAccounts(accounts); renderAdminConsole(); showToast(`ลบบัญชี ${a.email} เรียบร้อยแล้ว`);
         }
 
         function getAuthAccounts() {
@@ -1434,6 +1498,7 @@
                 name: name,
                 email: email,
                 password: password,
+                status: 'active',
                 createdAt: new Date().toISOString()
             });
             saveAuthAccounts(accounts);
@@ -1538,6 +1603,8 @@
             }
 
             const account = findAccount('tenant', email);
+
+            if(account && account.status === 'suspended') { showToast('บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ', 'fa-circle-xmark', 'text-rose-400'); return; }
 
             // บัญชีที่สมัครสมาชิก: ตรวจสอบอีเมล + รหัสผ่านจริง
             // โหมดเดิมยังคงใช้ได้: อีเมลใดก็ได้ + 12345 สำหรับ Demo
@@ -1646,6 +1713,8 @@
 
             const account = findAccount('landlord', email);
 
+            if(account && account.status === 'suspended') { showToast('บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ', 'fa-circle-xmark', 'text-rose-400'); return; }
+
             // บัญชีที่สมัครสมาชิก: ตรวจสอบอีเมล + รหัสผ่านจริง
             // โหมดเดิมยังคงใช้ได้: อีเมลใดก็ได้ + 12345 สำหรับ Demo
             if((account && account.password === pass) || (!account && pass === '12345')) {
@@ -1660,7 +1729,8 @@
                 if(account) localStorage.setItem('phitroom_landlord_name', account.name);
 
                 passwordInput.value = '';
-                renderLandlordConsole();
+                // เข้าสู่ระบบสำเร็จแล้ว จึงค่อยแสดงแถบเมนูเจ้าของหอพัก
+                switchRole('landlord');
                 showToast("เข้าสู่ระบบ Portal เจ้าของหอพักสำเร็จ");
             } else {
                 showToast("อีเมลหรือรหัสผ่านไม่ถูกต้อง หากยังไม่มีบัญชีให้สมัครสมาชิกก่อน", "fa-circle-xmark", "text-rose-400");
@@ -1673,7 +1743,8 @@
             localStorage.removeItem('phitroom_landlord_auth');
             localStorage.removeItem('phitroom_landlord_email');
             localStorage.removeItem('phitroom_landlord_name');
-            renderLandlordConsole();
+            // ออกจากระบบแล้วกลับไปหน้า Login และซ่อนแถบเมนูอีกครั้ง
+            switchRole('landlord');
             showToast("ออกจากระบบเจ้าของหอพักเรียบร้อย");
         }
 
